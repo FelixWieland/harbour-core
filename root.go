@@ -6,16 +6,18 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func main() {
+//Start starts the API Server
+func Start() {
 	router := httprouter.New()
 
 	/*ROUTES*/
 	router.GET("/stats", showPublicStats)
-	router.POST("/login", Login)
+	router.POST("/login", login)
+	router.POST("/pvt", checkAuth(login, isLoggedin))
 
 	http.ListenAndServe(":5000", router)
 }
 
 func showPublicStats(w http.ResponseWriter, r *http.Request, rt httprouter.Params) {
-
+	w.Write([]byte("Nothing to see here"))
 }
