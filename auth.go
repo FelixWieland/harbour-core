@@ -1,15 +1,11 @@
 package harbourcore
 
 import (
-	"encoding/base64"
-	"encoding/json"
-	"errors"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
-
-	"github.com/julienschmidt/httprouter"
 )
 
 type auth struct {
@@ -18,54 +14,115 @@ type auth struct {
 	latestAction time.Time
 }
 
-var activeSessions []auth
+type cache struct {
+	sessions []auth
+}
 
-func login(w http.ResponseWriter, r *http.Request, rt httprouter.Params) {
-	username := rt.ByName("username")
-	password := rt.ByName("password")
+var activeCache cache
+
+func login(w http.ResponseWriter, r *http.Request) {
+
+	//ctx := httpway.GetContext(r)
+
+	username := r.FormValue("username") //ctx.ParamByName("username")
+	password := r.FormValue("password") //ctx.ParamByName("password")
+
+	log.Printf("%v", password)
+
+	if !(len(username) > 0 && len(password) > 0) {
+		//error -> parameter not satisfied
+		apiError(w, r, newErrResponseParameterNotSatisfied())
+		return
+	}
+
+	session, err := r.Cookie("session")
+	if err == nil {
+		//has session cookie
+		authElm, err := activeCache.getAuthBySession(session.Value)
+		if err == nil {
+			//has valid session
+			_, err := authElm.updatettl()
+			if err != nil {
+				apiErrorHandler(w, r, err)
+				return
+			}
+			apiInfo(w, r, newInfoResponseAlreadyLoggedin(authElm.uuid))
+		}
+
+	}
+
+	//login logic
+
 	_ = username
 	_ = password
 }
 
-func forbidden(w http.ResponseWriter, r *http.Request, rt httprouter.Params) {
-	//http.Error(w, "You have no access to this location. Please log in to use this service", 403)
+func registrate(w http.ResponseWriter, r *http.Request) {
 
-	js, err := json.Marshal(respForbidden{
-		1,
-		"NoValidSession",
-		"You currently dont have a valid session, please log in to create a session",
-	})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Write(js)
 }
 
-func isLoggedin(w http.ResponseWriter, r *http.Request, rt httprouter.Params) (auth, error) {
-
-	cookies := r.Cookies()
-
-	for _, elm := range cookies {
-		if elm.Name == "session" {
-			for i, auth := range activeSessions {
-				if elm.Value == base64.StdEncoding.EncodeToString(auth.session) {
-					//loggedin
-					if ttlexpired(auth.latestAction) {
-						break
-					}
-					activeSessions[i].latestAction = time.Now()
-					return auth, nil
-				}
+func isLoggedin(w http.ResponseWriter, r *http.Request) (*auth, error) {
+	cookie, err := r.Cookie("session")
+	if err == nil {
+		authElm, err := activeCache.getAuthBySession(cookie.Value)
+		if err == nil {
+			//activeSession
+			_, err := authElm.updatettl()
+			if err != nil {
+				//ttl expired
+				authElm := &auth{}
+				return authElm, err
 			}
+			//ttl updated
+			return authElm, nil
 		}
 	}
 	//notloggedin
+	authElm := &auth{}
+	log.Printf("IP %v don't has a valid Session", r.RemoteAddr)
+	return authElm, errNoValidSession
+}
 
+func (cache *cache) getAuthBySession(pSessionKey string) (*auth, error) {
+	for i := range cache.sessions {
+		if pSessionKey == string(cache.sessions[i].session) {
+			//loggedin
+			//cache.sessions[i].latestAction = time.Now()
+			return &cache.sessions[i], nil
+		}
+	}
 	authElm := auth{}
-	return authElm, errors.New("noValidSession")
+	return &authElm, errNoValidSession
+}
 
+func (cache *cache) getAuthByUserID(pUserID uuid.UUID) (auth, error) {
+	for i := range cache.sessions {
+		if pUserID == cache.sessions[i].uuid {
+			//loggedin
+			//cache.sessions[i].latestAction = time.Now()
+			return cache.sessions[i], nil
+		}
+	}
+	authElm := auth{}
+	return authElm, errNoValidSession
+}
+
+func (cache *cache) appendAuth(pAuth auth) {
+	cache.sessions = append(cache.sessions, pAuth)
+}
+
+//updatettl returns an ttlExpired error if the ttl is expired
+func (auth *auth) updatettl() (bool, error) {
+	if !ttlexpired(auth.latestAction) {
+		return true, nil
+	}
+	return false, errttlExpired
+}
+
+func (auth *auth) delete() {
+	auth.session = []byte{}
+	auth.uuid = uuid.UUID{}
+	auth.latestAction = time.Time{}
 }
 
 func ttlexpired(ptime time.Time) bool {

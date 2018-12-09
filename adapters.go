@@ -4,20 +4,55 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/corneldamian/httpway"
 )
 
-func checkAuth(next httprouter.Handle, toCheck func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) (auth, error)) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+/*
+func checkAuth(h http.Handler) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, rt httprouter.Params) {
 		log.Printf("Incoming connection from %v", r.RemoteAddr)
 
+		s, err1 := r.Cookie("session")
+		if err1 == nil {
+			log.Printf("%v", s.Value)
+		}
+
 		w.Header().Set("Content-Type", "application/json")
-		_, err := toCheck(w, r, ps)
+		_, err := isLoggedin(w, r, rt)
 		if err != nil {
 			//notloggedin
-			forbidden(w, r, ps)
+			apiErrorHandler(w, r, rt, err)
 		} else {
-			next(w, r, ps)
+			isLoggedin(w, r, rt)
 		}
 	}
 }
+*/
+
+func accessLogger(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Incoming connection from %v", r.RemoteAddr)
+	httpway.GetContext(r).Next(w, r)
+}
+
+func authCheck(w http.ResponseWriter, r *http.Request) {
+
+	ctx := httpway.GetContext(r)
+
+	w.Header().Set("Content-Type", "application/json")
+	_, err := isLoggedin(w, r)
+	if err != nil {
+		//notloggedin
+		apiErrorHandler(w, r, err)
+	} else {
+		ctx.Next(w, r)
+	}
+
+}
+
+/*
+func julienHandler() httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		// do stuff
+	}
+}
+*/
