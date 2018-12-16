@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/FelixWieland/harbour-auth"
+
 	"github.com/corneldamian/httpway"
 )
 
@@ -35,17 +37,32 @@ func accessLogger(w http.ResponseWriter, r *http.Request) {
 }
 
 func authCheck(w http.ResponseWriter, r *http.Request) {
-
 	ctx := httpway.GetContext(r)
-
 	w.Header().Set("Content-Type", "application/json")
-	_, err := isLoggedin(w, r)
+	jwt := r.FormValue("jwt")
+	if len(jwt) == 0 {
+		//no jwt provided
+	}
+	claims, err := harbourauth.HarbourJWT(jwt).Decode(signKey)
 	if err != nil {
 		//notloggedin
 		apiErrorHandler(w, r, err)
 	} else {
+		ctx.Set("userid", claims.UserID)
+		ctx.Set("username", claims.Username)
+		ctx.Set("issue", claims.Issuer)
 		ctx.Next(w, r)
 	}
+}
+
+func permissionCheck(w http.ResponseWriter, r *http.Request) {
+	ctx := httpway.GetContext(r)
+
+	userid := ctx.Get("userid").(string)
+	username := ctx.Get("username").(string)
+	issue := ctx.Get("issue").(string)
+
+	//check if has permissions
 
 }
 

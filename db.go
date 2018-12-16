@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql" //sql driver
 )
+
+type sqlQuery string
 
 type loginCredentials struct {
 	Host     string `json:"host"`
@@ -16,6 +19,18 @@ type loginCredentials struct {
 	User     string `json:"user"`
 	Password string `json:"password"`
 	Database string `json:"database"`
+}
+
+func (sqlQuery sqlQuery) prep(vals ...string) string {
+	if len(vals) > strings.Count(string(sqlQuery), "?") {
+		panic("Too many arguments in prep call")
+	}
+
+	buffer := string(sqlQuery)
+	for _, elm := range vals {
+		buffer = strings.Replace(string(buffer), "?", "'"+elm+"'", 1)
+	}
+	return buffer
 }
 
 func loadCredentials(path string) loginCredentials {

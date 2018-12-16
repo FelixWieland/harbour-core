@@ -19,6 +19,7 @@ func apiErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 		apiError(w, r, newErrResponsettlExpired())
 		break
 	default:
+		apiError(w, r, newErrResponseForbidden())
 		return
 	}
 }

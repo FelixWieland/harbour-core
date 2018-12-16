@@ -4,66 +4,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
-type sqlQuery string
-
-func (sqlQuery sqlQuery) prep(vals ...string) string {
-	if len(vals) > strings.Count(string(sqlQuery), "?") {
-		panic("Too many arguments in prep call")
-	}
-
-	buffer := string(sqlQuery)
-	for _, elm := range vals {
-		buffer = strings.Replace(string(buffer), "?", "'"+elm+"'", 1)
-	}
-	return buffer
+func testJWTLogin(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Hello"))
 }
 
-func testCreateDemoSession(w http.ResponseWriter, r *http.Request) {
-
-	activeCache.appendAuth(auth{
-		uuid.New(),
-		[]byte("demoSession"),
-		time.Now(),
-	})
-
-	http.SetCookie(w, &http.Cookie{
-		Name:  "session",
-		Value: "demoSession",
-	})
-
-	s, err1 := r.Cookie("session")
-	s2, err2 := r.Cookie("session")
-	if err1 == nil {
-		log.Printf("%v", s.Value)
-	}
-	if err2 == nil {
-		log.Printf("%v", s2.Value)
-	}
-}
-
-func testDisplayDemoSession(w http.ResponseWriter, r *http.Request) {
-
-	s, err1 := r.Cookie("session")
-	if err1 == nil {
-		log.Printf("%v", s.Value)
-		w.Write([]byte(s.Value))
-	}
-
-	testForward(w, r)
-}
-
-func testForward(w http.ResponseWriter, r *http.Request) {
-	s, err1 := r.Cookie("session")
-	if err1 == nil {
-		log.Printf("%v", s.Value)
-		w.Write([]byte(s.Value))
-	}
+func testAllowedRoute(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Hello"))
 }
 
 func testDBInsert() {

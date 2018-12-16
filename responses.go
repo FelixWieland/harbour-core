@@ -29,7 +29,7 @@ func newErrResponseForbidden() errorResponse {
 		"error",
 		1,
 		"noValidSession",
-		"You currently dont have a valid session, please log in to create a session",
+		"You currently dont have a valid jwt, please log in to create a jwt",
 	}
 }
 
