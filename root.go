@@ -12,6 +12,7 @@ import (
 var signKey *rsa.PrivateKey
 var server *httpway.Server
 var db *sql.DB
+var secret string
 
 const (
 	privKeyPath = "keys/app.rsa" //openssl genrsa -out app.rsa 1024
@@ -21,6 +22,7 @@ const (
 func Start() {
 
 	signKey, _ = harbourauth.LoadAsPrivateRSAKey("")
+	secret = "demoSecret"
 	credentials := loadCredentials("../auth.json")
 
 	if ldb, err := connectToDB(credentials.toString()); err == nil {

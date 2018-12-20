@@ -43,7 +43,7 @@ func authCheck(w http.ResponseWriter, r *http.Request) {
 	if len(jwt) == 0 {
 		//no jwt provided
 	}
-	claims, err := harbourauth.HarbourJWT(jwt).Decode(signKey)
+	claims, err := harbourauth.HarbourJWT(jwt).Decode(signKey, secret)
 	if err != nil {
 		//notloggedin
 		apiErrorHandler(w, r, err)
